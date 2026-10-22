@@ -132,6 +132,13 @@
   .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
   .hint{font-size:.72rem; color:var(--muted); margin-top:3px;}
   .hint.warn{color:var(--red); font-weight:600;}
+  .inv-unit-row{display:flex; gap:10px; align-items:flex-start;}
+  .inv-unit-row #invoiceField{flex:1 1 auto; min-width:0;}
+  .inv-unit-row #unitField{flex:0 0 118px; min-width:0;}
+  #unitHint:empty{display:none;}
+  .age-unit-row{display:flex; gap:10px; align-items:flex-start;}
+  .age-unit-row .agecol{flex:1 1 auto; min-width:0;}
+  .age-unit-row #unitField{flex:0 0 118px; min-width:0; margin-bottom:0;}
   .agehint{margin-top:3px;}
   .agehint summary{cursor:pointer; color:var(--pine); font-weight:600; padding:3px 0;}
   .agehint table{border-collapse:collapse; width:100%; margin:4px 0; font-size:.74rem;}
@@ -362,7 +369,7 @@
         <div class="row2">
           <div class="field">
             <label for="loanAmount">Loan Amount</label>
-            <input id="loanAmount" type="number" min="0" step="1" value="10000">
+            <input id="loanAmount" type="text" inputmode="numeric" autocomplete="off" value="10,000">
             <div class="hint" id="amountLimitHint"></div>
           </div>
           <div class="field">
@@ -381,21 +388,33 @@
       </div>
 
       <div class="card" id="partnerCard" style="display:none;">
-        <h2 id="partnerTitle">Partner Invoice</h2>
+        <h2 id="partnerTitle">Partner</h2>
         <div class="field" id="hmoAgeField" style="display:none;">
-          <label for="hmoAge">Edad ng Miyembro (K-HMO Price)</label>
-          <select id="hmoAge">
-            <option value="12-65">12–65 years old</option>
-            <option value="66-70">66–70 years old</option>
-            <option value="71-75">71–75 years old</option>
-          </select>
+          <div class="age-unit-row">
+            <div class="agecol">
+              <label for="hmoAge">Edad ng Miyembro (K-HMO Price)</label>
+              <select id="hmoAge">
+                <option value="12-65">12–65 years old</option>
+                <option value="66-70">66–70 years old</option>
+                <option value="71-75">71–75 years old</option>
+              </select>
+            </div>
+            <div id="unitSlotHmo" style="display:contents;"></div>
+          </div>
           <div class="hint">Kusang kukunin ang K-HMO Price (halaga ng partner) ayon sa edad. Promo period ayon sa K-COOP Memo No. 2026-044: July 1–31, 2026 o hanggang sa maabot ng SatO ang unang 75 miyembro. Ang SF at CLIP ay idinadagdag sa loan.</div>
         </div>
-        <div class="field" id="invoiceField">
-          <label for="invoiceAmt">Invoice Amount per Unit</label>
-          <input id="invoiceAmt" type="number" min="0" step="0.01" placeholder="Encode invoice amount here">
-          <div class="hint">Kusang ilalagay ang "To Encode" sa Loan Amount ayon sa napiling Term at Insurance Category. Puwede ring pindutin ang "Gamitin" sa ibang term.</div>
+        <div class="inv-unit-row" id="unitRowInv">
+          <div class="field" id="invoiceField">
+            <label for="invoiceAmt">Invoice Amount per Unit</label>
+            <input id="invoiceAmt" type="number" min="0" step="0.01" placeholder="Encode invoice amount here">
+          </div>
+          <div class="field" id="unitField" style="display:none;">
+            <label for="unitCount">Number of Units</label>
+            <input id="unitCount" type="number" min="1" step="1" value="1" placeholder="1" inputmode="numeric">
+          </div>
         </div>
+        <div class="hint" id="invoiceHint" style="margin-top:-6px; margin-bottom:12px;">Kusang ilalagay ang "To Encode" sa Loan Amount ayon sa napiling Term at Insurance Category. Puwede ring pindutin ang "Gamitin" sa ibang term.</div>
+        <div class="hint" id="unitHint" style="margin-top:-6px; margin-bottom:12px;"></div>
         <div class="hint warn" id="invNote"></div>
         <div id="invWrap" style="display:none;">
           <div style="overflow-x:auto;">
@@ -411,7 +430,7 @@
         </div>
       </div>
 
-      <div class="card cmp-card">
+      <div class="card cmp-card" id="insCard">
         <h2>Insurance Category</h2>
         <div class="field">
           <label for="memberStatus">Insurance Category</label>
@@ -437,7 +456,7 @@
         </div>
       </div>
 
-      <div class="card cmp-card">
+      <div class="card cmp-card" id="disbCard">
         <h2>Disbursement Details</h2>
         <div class="field disb-wrap"><div class="disb-row">
           <div>
@@ -629,11 +648,14 @@ function clipPolicy(){
 const MBA_ADVANCE = {15:320, 25:520, 35:720, 50:1020};
 
 const SATELLITE_OFFICES = [
-  'BATASAN','FAIRVIEW','T. SORA','NOVALICHES','LAGRO','CAMARIN','B. SILANG','LAS PIÑAS','PARAÑAQUE',
-  'NORZAGARAY','S. PALAY','MUZON','TUNGKO','BOCAUE','MARILAO','MEYCAUAYAN','BALIUAG','MALOLOS','PULILAN',
+  'BATASAN','FAIRVIEW','TANDANG SORA','NOVALICHES','LAGRO','CAMARIN','BAGONG SILANG','LAS PIÑAS','PARAÑAQUE',
+  'NORZAGARAY','SAPANG PALAY','MUZON','TUNGKO','BOCAUE','MARILAO','MEYCAUAYAN','BALIUAG','MALOLOS','PULILAN',
   'SAN PEDRO','CABUYAO','DASMA','GMA','TRECE','MONTALBAN','RHS','MASINAG','SAN MATEO','PADILLA','ANTIPOLO PROPER',
   'TERESA','BARAS','BINANGONAN','CAINTA','TAYTAY'
 ];
+/* Satellite Office list is shown A→Z (accents and punctuation ignored, e.g. "LAS PIÑAS" sorts as LASPINAS) */
+{ const k = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^A-Za-z0-9]+/g, '').toUpperCase();
+  SATELLITE_OFFICES.sort((a, b) => { const x = k(a), y = k(b); return x < y ? -1 : x > y ? 1 : 0; }); }
 
 /* ---------- standard savings table: [amount, wk15, wk25, wk35, wk50] ---------- */
 const STD_SAVINGS = [[3000,161,101,45,41],[4000,168,105,50,44],[5000,175,109,56,48],[6000,182,112,61,51],[7000,189,116,66,55],[8000,196,120,71,59],[9000,203,124,76,62],[10000,210,127,81,66],[11000,217,131,86,69],[12000,224,135,91,73],[13000,231,138,96,76],[14000,238,142,102,80],[15000,245,146,107,84],[16000,252,150,112,87],[17000,259,153,117,91],[18000,266,157,122,94],[19000,273,161,127,98],[20000,280,165,132,101],[21000,287,168,137,105],[22000,294,172,142,108],[23000,301,176,148,112],[24000,308,179,153,116],[25000,315,183,158,119],[26000,322,187,163,123],[27000,329,191,168,126],[28000,336,194,173,130],[29000,343,198,178,133],[30000,350,202,183,137],[31000,357,205,188,141],[32000,364,209,194,144],[33000,371,213,199,148],[34000,379,217,204,151],[35000,386,220,209,155],[36000,393,224,214,158],[37000,400,228,219,162],[38000,407,232,224,166],[39000,414,235,229,169],[40000,421,239,234,173],[41000,428,243,240,176],[42000,435,246,245,180],[43000,442,250,250,183],[44000,449,254,255,187],[45000,456,258,260,191],[46000,463,261,265,194],[47000,470,265,270,198],[48000,477,269,275,201],[49000,484,273,280,205],[50000,491,276,285,208],[51000,498,280,291,212],[52000,505,284,296,215],[53000,512,287,301,219],[54000,519,291,306,223],[55000,526,295,311,226],[56000,533,299,316,230],[57000,540,302,321,233],[58000,547,306,326,237],[59000,554,310,331,240],[60000,561,314,337,244],[61000,568,317,342,248],[62000,575,321,347,251],[63000,582,325,352,255],[64000,589,328,357,258],[65000,596,332,362,262],[66000,603,336,367,265],[67000,610,340,372,269],[68000,617,343,377,273],[69000,624,347,383,276],[70000,631,351,388,280],[71000,638,354,393,283],[72000,645,358,398,287],[73000,652,362,403,290],[74000,659,366,408,294],[75000,666,369,413,298],[76000,673,373,418,301],[77000,680,377,423,305],[78000,687,381,429,308],[79000,694,384,434,312],[80000,701,388,439,315],[81000,708,392,444,319],[82000,715,395,449,322],[83000,722,399,454,326],[84000,729,403,459,330],[85000,736,407,464,333],[86000,743,410,469,337],[87000,750,414,475,340],[88000,757,418,480,344],[89000,764,422,485,347],[90000,771,425,490,351],[91000,778,429,495,355],[92000,785,433,500,358],[93000,792,436,505,362],[94000,799,440,510,365],[95000,806,444,515,369],[96000,813,448,521,372],[97000,820,451,526,376],[98000,827,455,531,380],[99000,834,459,536,383],[100000,841,463,541,387],[101000,848,466,546,390],[102000,856,470,551,394],[103000,863,474,556,397],[104000,870,477,561,401],[105000,877,481,567,405],[106000,884,485,572,408],[107000,891,489,577,412],[108000,898,492,582,415],[109000,905,496,587,419],[110000,912,500,592,422],[111000,919,503,597,426],[112000,926,507,602,430],[113000,933,511,607,433],[114000,940,515,613,437],[115000,947,518,618,440],[116000,954,522,623,444],[117000,961,526,628,447],[118000,968,530,633,451],[119000,975,533,638,454],[120000,982,537,643,458],[121000,989,541,648,462],[122000,996,544,653,465],[123000,1003,548,659,469],[124000,1010,552,664,472],[125000,1017,556,669,476],[126000,1024,559,674,479],[127000,1031,563,679,483],[128000,1038,567,684,487],[129000,1045,571,689,490],[130000,1052,574,694,494],[131000,1059,578,699,497],[132000,1066,582,704,501],[133000,1073,585,710,504],[134000,1080,589,715,508],[135000,1087,593,720,512],[136000,1094,597,725,515],[137000,1101,600,730,519],[138000,1108,604,735,522],[139000,1115,608,740,526],[140000,1122,612,745,529],[141000,1129,615,750,533],[142000,1136,619,756,537],[143000,1143,623,761,540],[144000,1150,626,766,544],[145000,1157,630,771,547],[146000,1164,634,776,551],[147000,1171,638,781,554],[148000,1178,641,786,558],[149000,1185,645,791,561],[150000,1192,649,796,565],[151000,1199,652,802,569],[152000,1206,656,807,572],[153000,1213,660,812,576],[154000,1220,664,817,579],[155000,1227,667,822,583],[156000,1234,671,827,586],[157000,1241,675,832,590],[158000,1248,679,837,594],[159000,1255,682,842,597],[160000,1262,686,848,601],[161000,1269,690,853,604],[162000,1276,693,858,608],[163000,1283,697,863,611],[164000,1290,701,868,615],[165000,1297,705,873,619],[166000,1304,708,878,622],[167000,1311,712,883,626],[168000,1318,716,888,629],[169000,1326,720,894,633],[170000,1333,723,899,636],[171000,1340,727,904,640],[172000,1347,731,909,644],[173000,1354,734,914,647],[174000,1361,738,919,651],[175000,1368,742,924,654],[176000,1375,746,929,658],[177000,1382,749,934,661],[178000,1389,753,940,665],[179000,1396,757,945,669],[180000,1403,761,950,672],[181000,1410,764,955,676],[182000,1417,768,960,679],[183000,1424,772,965,683],[184000,1431,775,970,686],[185000,1438,779,975,690],[186000,1445,783,980,693],[187000,1452,787,986,697],[188000,1459,790,991,701],[189000,1466,794,996,704],[190000,1473,798,1001,708],[191000,1480,801,1006,711],[192000,1487,805,1011,715],[193000,1494,809,1016,718],[194000,1501,813,1021,722],[195000,1508,816,1026,726],[196000,1515,820,1032,729],[197000,1522,824,1037,733],[198000,1529,828,1042,736],[199000,1536,831,1047,740],[200000,1543,835,1052,743],[201000,1550,839,1057,747],[202000,1557,842,1062,751],[203000,1564,846,1067,754],[204000,1571,850,1072,758],[205000,1578,854,1078,761],[206000,1585,857,1083,765],[207000,1592,861,1088,768],[208000,1599,865,1093,772],[209000,1606,869,1098,776],[210000,1613,872,1103,779],[211000,1620,876,1108,783],[212000,1627,880,1113,786],[213000,1634,883,1118,790],[214000,1641,887,1123,793],[215000,1648,891,1029,797],[216000,1655,895,1034,800],[217000,1662,898,1039,804],[218000,1669,902,1044,808],[219000,1676,906,1049,811],[220000,1683,910,1054,815],[221000,1690,913,1059,818],[222000,1697,917,1064,822],[223000,1704,921,1069,825],[224000,1711,924,1075,829],[225000,1718,928,1080,833],[226000,1725,932,1085,836],[227000,1732,936,1090,840],[228000,1739,939,1095,843],[229000,1746,943,1100,847],[230000,1753,947,1105,850],[231000,1760,950,1110,854],[232000,1767,954,1115,858],[233000,1774,958,1021,861],[234000,1781,962,1026,865],[235000,1788,965,1031,868],[236000,1796,969,1036,872],[237000,1803,973,1041,875],[238000,1810,977,1046,879],[239000,1817,980,1051,883],[240000,1824,984,1056,886],[241000,1831,988,1061,890],[242000,1838,991,1067,893],[243000,1845,995,1072,897],[244000,1852,999,1077,900],[245000,1859,1003,1082,904],[246000,1866,1006,1087,907],[247000,1873,1010,1092,911],[248000,1880,1014,1097,915],[249000,1887,1018,1102,918],[250000,1894,1021,1107,922],[251000,1901,1025,1113,925],[252000,1908,1029,1118,929],[253000,1915,1032,1123,932],[254000,1922,1036,1128,936],[255000,1929,1040,1133,940],[256000,1936,1044,1138,943],[257000,1943,1047,1143,947],[258000,1950,1051,1148,950],[259000,1957,1055,1153,954],[260000,1964,1059,1159,957],[261000,1971,1062,1164,961],[262000,1978,1066,1169,965],[263000,1985,1070,1174,968],[264000,1992,1073,1179,972],[265000,1999,1077,1184,975],[266000,2006,1081,1189,979],[267000,2013,1085,1194,982],[268000,2020,1088,1199,986],[269000,2027,1092,1205,990],[270000,2034,1096,1210,993],[271000,2041,1099,1215,997],[272000,2048,1103,1220,1000],[273000,2055,1107,1225,1004],[274000,2062,1111,1230,1007],[275000,2069,1114,1235,1011],[276000,2076,1118,1240,1015],[277000,2083,1122,1245,1018],[278000,2090,1126,1251,1022],[279000,2097,1129,1256,1025],[280000,2104,1133,1261,1029],[281000,2111,1137,1266,1032],[282000,2118,1140,1271,1036],[283000,2125,1144,1276,1039],[284000,2132,1148,1281,1043],[285000,2139,1152,1286,1047],[286000,2146,1155,1291,1050],[287000,2153,1159,1297,1054],[288000,2160,1163,1302,1057],[289000,2167,1167,1307,1061],[290000,2174,1170,1312,1064],[291000,2181,1174,1317,1068],[292000,2188,1178,1322,1072],[293000,2195,1181,1327,1075],[294000,2202,1185,1332,1079],[295000,2209,1189,1337,1082],[296000,2216,1193,1342,1086],[297000,2223,1196,1348,1089],[298000,2230,1200,1353,1093],[299000,2237,1204,1358,1097],[300000,2244,1208,1363,1100]];
@@ -721,11 +743,20 @@ function bandValue(t){
 const variantOf = t => (t && t.variants) ? (t.variants[$('promoMode').value] || t.variants.regular) : null;
 const cycleOf = t => (t && t.cycles) ? (t.cycles.find(c=>c.key===$('transpoCycle').value) || t.cycles[0]) : null;
 const effMax = t => { const v = variantOf(t); if (v) return v.max; const c = cycleOf(t); return c ? c.max : t.max; };
-function invoiceFor(t, term){
+/* Partner card: heading label + number of units (a member may avail of more than 1 unit) */
+const PARTNER_TITLE_NAME = {'BEN-W2':'DAKILA (KOK)'};
+const UNIT_TYPES = ['KALU-W1','KALU-W3','K-HMO'];   /* types that show the "Number of Units" input */
+function unitsFor(t){
+  if (!t || !UNIT_TYPES.includes(t.code)) return 1;
+  const u = Math.floor(parseFloat($('unitCount').value));
+  return u >= 1 ? u : 1;
+}
+function invoicePerUnit(t, term){
   const cfg = AGE_BAND_PRICING[t.code];
   if (cfg){ const b = cfg.amounts[bandValue(t)]; return b ? (b[term] || 0) : 0; }
   return parseFloat($('invoiceAmt').value) || 0;
 }
+function invoiceFor(t, term){ return Math.round(invoicePerUnit(t, term) * unitsFor(t) * 100) / 100; }
 const netLabel = t => PARTNER_TYPES[t.code] ? 'Payable to Partners-' + PARTNER_TYPES[t.code] : 'Kabuuang Matatanggap';
 const WEEKLY_INSURANCE_NO_ADVANCE = 20; /* charged per week instead, when status is blank (no advance insurance deduction) */
 
@@ -1029,6 +1060,25 @@ function paintPwd(){
 }
 $('pwdBtn').addEventListener('click', ()=>{ pwdOn = !pwdOn; paintPwd(); refreshRateAndSF(); });
 statusSel.addEventListener('change', refreshMemberStatus);
+/* Loan Amount shows thousands separators (e.g. 12,500) so the number of digits is easy to check; .value still reads as plain digits for all the other code */
+(function(){
+  const el = $('loanAmount'), d = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+  const fmtC = v => {
+    const s = String(v ?? '').replace(/[^\d.]/g, ''), i = s.indexOf('.');
+    let ip = i < 0 ? s : s.slice(0, i); const fp = i < 0 ? null : s.slice(i + 1).replace(/\./g, '');
+    ip = ip.replace(/^0+(?=\d)/, '').replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+    return fp === null ? ip : ip + '.' + fp;
+  };
+  Object.defineProperty(el, 'value', { configurable: true, get(){ return d.get.call(el).replace(/,/g, ''); }, set(v){ d.set.call(el, fmtC(v)); } });
+  el.addEventListener('input', ()=>{
+    const raw = d.get.call(el), pos = el.selectionStart, before = raw.slice(0, pos).replace(/[^\d.]/g, '').length, f = fmtC(raw);
+    if (f !== raw){
+      d.set.call(el, f);
+      let n = 0, p = 0; while (p < f.length && n < before){ if (/[\d.]/.test(f[p])) n++; p++; }
+      try { el.setSelectionRange(p, p); } catch(e){}
+    }
+  });
+})();
 $('loanAmount').addEventListener('input', ()=>{ enforceAmountLimit(); recalc(); });
 $('loanAmount').addEventListener('change', ()=>{ enforceAmountLimit(true); recalc(); });
 function applyAcctLimit(){
@@ -1096,6 +1146,9 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt
 /* ---------- Partner invoice → "To Encode" table ----------
    To Encode (loan amount) = (Invoice + SMS) / (1 − SF% − CLIP%), rounded to the peso, so that
    Loan − SF − SMS − CLIP ≈ Invoice. The small leftover is the "Butal" you encode manually. */
+/* Round-half-up to the centavo (tiny epsilon so values like 10.005 always round up). Each deduction is rounded first;
+   the NET is the balancing figure (Loan − rounded deductions), so debit (loan) = credit (deductions + net) exactly. */
+const r2 = x => Math.round(x * 100 + 1e-6) / 100;
 let invRows = [], invHidden = 0, invSig = '';
 function invoiceRows(){
   const t = LOAN_TYPES[typeSel.value], invBase = parseFloat($('invoiceAmt').value) || 0, age = currentAge();
@@ -1106,23 +1159,33 @@ function invoiceRows(){
     const sfPct = Math.min(Math.max(sfDefaultFor(t, term, age), t.sf.min), t.sf.max);
     const clipPct = computeInsuranceAndClip(age, '', term, 100).clipPct;
     /* smallest whole-peso loan whose remittance (Loan − CLIP − SF − SMS) is AT LEAST the invoice → Butal is never negative */
-    const advOf = p => p - p*clipPct/100 - (p*sfPct/100 + SMS_FEE_FLAT);   /* exact (unrounded) remittance, so a hidden fraction of a centavo can never leave it short */
+    const advOf = p => r2(p - r2(p*clipPct/100) - (r2(p*sfPct/100) + SMS_FEE_FLAT));   /* remittance = Loan − rounded CLIP − rounded SF − SMS (same as the Net in recalc), so Butal always matches */
     let P = Math.max(1, Math.floor((inv + SMS_FEE_FLAT) / (1 - sfPct/100 - clipPct/100)) - 2);
     while (advOf(P) < inv - 1e-9) P++;
     if (effMax(t) && P > effMax(t)){ invHidden++; return null; }      /* not a valid option: exceeds the loan type's max */
     const rate = ratesForType(t, term), sc = buildSchedule(P, term, rate);
-    const clip = P*clipPct/100, sfSms = P*sfPct/100 + SMS_FEE_FLAT, adv = advOf(P);
+    const clip = r2(P*clipPct/100), sfSms = r2(P*sfPct/100) + SMS_FEE_FLAT, adv = advOf(P);
     return {term, rate, P, total:sc.TotalLoan, weekly:sc.W, clip, sfSms, adv, diff:Math.round((advOf(P) - inv + 1e-9) * 100) / 100, inv, over:false};
   }).filter(Boolean);
 }
 function renderInvoice(){
   const t = LOAN_TYPES[typeSel.value], partner = PARTNER_TYPES[t.code];
   $('partnerCard').style.display = partner ? '' : 'none';
+  /* Disbursement Details only applies to loans released to the member — hidden (and cleared) for partner loans */
+  $('disbCard').style.display = partner ? 'none' : '';
+  /* Insurance Category is not needed when the age bracket is already picked in the Partner card (K-HMO, K-Benepisyo W2) */
+  $('insCard').style.display = hasAgeBand(t) ? 'none' : '';
+  if (partner){ $('disbFee').value = 0; $('beneBank').value = ''; $('beneAcct').value = ''; try{ applyAcctLimit(); }catch(e){} }
   if (!partner){ invRows = []; invSig = ''; return false; }
-  $('partnerTitle').textContent = 'Partner Invoice — ' + partner;
+  $('partnerTitle').textContent = 'Partner : ' + (PARTNER_TITLE_NAME[t.code] || partner);
   const ageCfg = AGE_BAND_PRICING[t.code];
   $('hmoAgeField').style.display = ageCfg ? '' : 'none';
   $('invoiceField').style.display = ageCfg ? 'none' : '';
+  $('invoiceHint').style.display = ageCfg ? 'none' : '';
+  { const slot = (t.code === 'K-HMO') ? $('unitSlotHmo') : $('unitRowInv');   /* K-HMO: units sit on the same row as the age dropdown */
+    if ($('unitField').parentNode !== slot) slot.appendChild($('unitField'));
+    if (document.activeElement !== $('unitCount') && !(parseInt($('unitCount').value) >= 1)) $('unitCount').value = 1; }   /* default: 1 unit */
+  $('unitField').style.display = UNIT_TYPES.includes(t.code) ? '' : 'none';
   if (ageCfg){
     const sel = $('hmoAge');
     if (sel.dataset.forType !== t.code){
@@ -1139,6 +1202,8 @@ function renderInvoice(){
       hintEl.dataset.forType = t.code;
     }
   }
+  { const u = unitsFor(t), per = invoicePerUnit(t, parseInt(termSel.value) || t.terms[0]);
+    $('unitHint').textContent = (UNIT_TYPES.includes(t.code) && u > 1 && per > 0) ? `Kabuuang Invoice: ${fmt(per * u)} (${u} units × ${fmt(per)})` : ''; }
   invRows = invoiceRows();
   $('invWrap').style.display = invRows.length ? '' : 'none';
   $('invNote').textContent = invHidden ? (invRows.length ? `${invHidden} term ang inalis: lampas sa max ng loan type ang kailangang Loan Amount.` : 'Walang valid na term: lampas sa max ng loan type ang kailangang Loan Amount para sa invoice na ito.') : '';
@@ -1147,7 +1212,7 @@ function renderInvoice(){
     <td>${fmt(r.adv)}</td><td>${fmt(r.diff)}</td><td><button type="button" class="useRow" data-i="${i}" style="padding:4px 10px;min-height:0;">Gamitin</button></td></tr>`).join('');
   /* Auto-fill Loan Amount with To Encode whenever type / term / category / invoice changes (manual edits afterwards are kept) */
   let filled = false;
-  const sig = [typeSel.value, termSel.value, currentAge(), $('invoiceAmt').value, $('hmoAge').value].join('|');
+  const sig = [typeSel.value, termSel.value, currentAge(), $('invoiceAmt').value, $('hmoAge').value, $('unitCount').value].join('|');
   if (sig !== invSig){
     invSig = sig;
     const row = invRows.find(r => r.term === parseInt(termSel.value));
@@ -1156,6 +1221,8 @@ function renderInvoice(){
   return filled;
 }
 $('invoiceAmt').addEventListener('input', ()=>recalc());
+$('unitCount').addEventListener('input', ()=>recalc());
+$('unitCount').addEventListener('blur', ()=>{ if (!(parseInt($('unitCount').value) >= 1)){ $('unitCount').value = 1; recalc(); } });
 $('hmoAge').addEventListener('change', ()=>refreshMemberStatus());
 $('promoMode').addEventListener('change', ()=>refreshTerms());
 $('transpoCycle').addEventListener('change', ()=>refreshTerms());
@@ -1174,7 +1241,7 @@ $('invCopy').addEventListener('click', ()=>{
 });
 $('invPrint').addEventListener('click', ()=>{
   if (!invRows.length) return;
-  const t = LOAN_TYPES[typeSel.value], partner = PARTNER_TYPES[t.code], n = invRows.length;
+  const t = LOAN_TYPES[typeSel.value], partner = PARTNER_TYPES[t.code], n = invRows.length, u = unitsFor(t);
   const body = invRows.map((r,i)=>`<tr>${i?'':`<td rowspan="${n}" class="iv">${fmt(r.inv)}</td>`}<td class="g">${fmt(r.P>0?r.total:0)}</td><td>${fmt(r.weekly)}</td><td class="red">${r.rate}%</td><td><b>${r.term}</b></td><td class="enc">${fmt(r.P)}</td><td>${fmt(r.clip)}</td><td>${fmt(r.sfSms)}</td><td>${fmt(r.adv)}</td><td>${fmt(r.diff)}</td><td><b>${fmt(r.inv)}</b></td></tr>`).join('');
   const w = window.open('', '_blank'); if (!w){ alert('I-allow ang pop-up para ma-print ang table.'); return; }
   w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Invoice Table</title><style>
@@ -1183,7 +1250,7 @@ $('invPrint').addEventListener('click', ()=>{
     th{background:#bdd7ee;} th.d{background:#8497b0;color:#fff;} td.iv{background:#fff;font-weight:600;} td.g{background:#d9d9d9;} td.enc{background:#8497b0;color:#fff;font-weight:700;} td.red{color:#e00;}
     .note{color:#e00;font-weight:700;font-style:italic;margin-top:8px;}</style></head><body>
     <h3>${esc(t.name)} — ${esc(partner)} ${officeSel.value ? '(' + esc(officeSel.value) + ')' : ''}</h3>
-    <table><thead><tr><th class="d" rowspan="2">INVOICE AMOUNT<br>PER UNIT</th><th colspan="2">Amortization</th><th colspan="8">Liquidation Details / Remittance</th></tr>
+    <table><thead><tr><th class="d" rowspan="2">INVOICE AMOUNT<br>${u > 1 ? '(' + u + ' UNITS)' : 'PER UNIT'}</th><th colspan="2">Amortization</th><th colspan="8">Liquidation Details / Remittance</th></tr>
     <tr><th>LOAN</th><th>WEEKLY</th><th>M.I</th><th>TERM</th><th class="d">To Encode</th><th>CLIP</th><th>SF+SMS</th><th>Adv.From</th><th class="d">Butal</th><th>Invoice</th></tr></thead>
     <tbody>${body}</tbody></table>
     <div class="note">*Tiyakin na tugma ang amount sa remittance table - invoice amount vs actual Sales invoice per unit</div></body></html>`);
@@ -1221,9 +1288,10 @@ function recalc(){
     : insCode==='R' ? 'Advance BLIP deducted to loan'
     : (mbaEligibleNow() ? 'BLIP weekly payment' : '—'); /* weekly BLIP only exists on KABU W1/W2 */
   const sfPct = currentSFPct();
-  const sf = currentSFAmount(P);          /* normal Service Fee (0 for PWD) */
+  const sf = r2(currentSFAmount(P));      /* normal Service Fee (0 for PWD), rounded half-up to the centavo */
   const sms = SMS_FEE_FLAT;               /* ₱10 SMS fee — every loan type, on top of Service Fee */
-  const {clipPct, clip, clipNote, insurance, insNote} = computeInsuranceAndClip(age, insCode, n, P);
+  const {clipPct, clip: clipRaw, clipNote, insurance, insNote} = computeInsuranceAndClip(age, insCode, n, P);
+  const clip = r2(clipRaw);               /* CLIP rounded half-up to the centavo */
 
   const isNew = insCode === 'N';
   const idFee = isNew ? ID_FEE_NEW : 0;
@@ -1232,7 +1300,7 @@ function recalc(){
   const hasOnlineDisb0 = disbFeeIn > 0 || !!($('beneBank').value.trim() || $('beneAcct').value.trim());   /* a Fee amount alone makes it ONLINE; bank/account details are optional */
   const disbFee = hasOnlineDisb0 ? disbFeeIn : 0;
   const remBal = (isNew || PARTNER_TYPES[t.code]) ? 0 : (parseFloat($('remBal').value)||0);   /* no re-loan balance for a New loan, or for loans payable to partners */
-  const net = P - sf - sms - clip - insurance - idFee - kmbaMem - disbFee - remBal;
+  const net = r2(P - sf - sms - clip - insurance - idFee - kmbaMem - disbFee - remBal);   /* balancing figure: absorbs any centavo */
   $('outNet').textContent = fmt(net);
   { const nl = netLabel(t), isP = !!PARTNER_TYPES[t.code], inv = invoiceFor(t, n);
     $('discNetLbl').textContent = nl; $('outNetLbl').textContent = nl; $('bbNetLbl').textContent = isP ? 'Payable' : 'Matatanggap';
@@ -1500,7 +1568,7 @@ $('bbAction').dataset.mode = 'input';
 $('resetBtn').addEventListener('click', ()=>{
   $('memberName').value=''; $('center').value=''; officeSel.value = ''; officeSearch.value = '';
   typeSel.value = 0; typeSearch.value = LOAN_TYPES[0].name; $('loanAmount').value = 10000; pwdOn=false; paintPwd();
-  statusSel.value=''; savingsOn=false; $('invoiceAmt').value=''; $('hmoAge').selectedIndex=0; $('promoMode').value='regular'; $('transpoCycle').value='3-6'; $('remBal').value=0; $('firstPayDate').value='';
+  statusSel.value=''; savingsOn=false; $('invoiceAmt').value=''; $('unitCount').value=1; $('hmoAge').selectedIndex=0; $('promoMode').value='regular'; $('transpoCycle').value='3-6'; $('remBal').value=0; $('firstPayDate').value='';
   $('disbFee').value=0; $('beneBank').value=''; $('beneAcct').value='';
   refreshTerms(); refreshMemberStatus();
   setTab('input');
