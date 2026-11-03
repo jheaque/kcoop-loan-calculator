@@ -63,6 +63,26 @@
     background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.4); color:#fff;}
   header.top h1{font-size:1.15rem; letter-spacing:.2px;}
   header.top p{margin:2px 0 0; color:#cfe3d8; font-size:.78rem;}
+  /* "What's new" pill in the header + list popup */
+  header.top .news-pill{flex:1 1 auto; min-width:0; max-width:420px; margin:0 auto; display:flex; align-items:center; gap:8px; min-height:0; padding:6px 12px; background:rgba(255,255,255,.12); color:#fdfbf6; border:1px solid var(--gold); border-radius:999px; font-size:.8rem; text-align:left; animation:newsGlow 2.8s ease-in-out infinite;}
+  .news-tag{flex:0 0 auto; background:var(--gold); color:#1b1b1b; font-weight:700; font-size:.64rem; letter-spacing:.5px; border-radius:999px; padding:2px 7px; animation:newsBlink 1.6s ease-in-out infinite;}
+  .news-viewport{flex:1 1 auto; min-width:0; height:1.35em; overflow:hidden; display:block;}
+  .news-text{display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.35; transform-origin:left center;}
+  .news-text.pop{animation:newsPop 5.5s ease-in-out forwards;}
+  @keyframes newsPop{0%{opacity:0; transform:translateY(70%) scale(.94);} 10%{opacity:1; transform:translateY(0) scale(1.04);} 16%{transform:scale(1);} 86%{opacity:1; transform:translateY(0);} 100%{opacity:0; transform:translateY(-70%);}}
+  @keyframes newsGlow{0%,100%{box-shadow:0 0 0 0 rgba(217,171,99,0);} 50%{box-shadow:0 0 0 5px rgba(217,171,99,.28);}}
+  @keyframes newsBlink{0%,100%{opacity:1;} 50%{opacity:.55;}}
+  @media (prefers-reduced-motion: reduce){ header.top .news-pill, .news-tag, .news-text.pop{animation:none;} }
+  @media (max-width:520px){ header.top .news-pill{order:2; flex:1 1 100%; max-width:none; margin:2px 0 4px; padding:6px 10px; font-size:.76rem;} }
+  .news-modal{position:fixed; inset:0; z-index:9999; display:flex; align-items:center; justify-content:center; padding:16px; background:rgba(0,0,0,.55);}
+  .news-modal[hidden]{display:none;}
+  .news-box{background:var(--surface); color:var(--ink); border-radius:12px; max-width:480px; width:100%; max-height:80vh; overflow:auto; padding:16px 18px; box-shadow:0 10px 30px rgba(0,0,0,.35);}
+  .news-box h3{margin:0 0 2px; font-size:1.05rem; color:var(--pine);}
+  .news-box .news-sub{font-size:.76rem; color:var(--muted); margin-bottom:10px;}
+  .news-box ul{list-style:none; margin:0 0 12px; padding:0;}
+  .news-box li{padding:8px 0; border-top:1px solid var(--line); font-size:.85rem; line-height:1.45;}
+  .news-box li b{display:block; font-size:.72rem; color:var(--gold); letter-spacing:.3px;}
+  .news-box button{width:100%; background:var(--pine); color:#fff; border:0;}
 
   /* App-style tab bar — mobile only; both panels stay visible together on wider screens */
   .appbar{position:sticky; top:0; z-index:20;}
@@ -300,6 +320,7 @@
       <h1>K-COOP Loan Calculator</h1>
       <p>Kabuhayan sa Ganap na Kasarinlan Credit and Savings Cooperative</p>
     </div>
+    <button type="button" id="newsPill" class="news-pill" aria-label="See what's new in the calculator"><span class="news-tag">NEW</span><span class="news-viewport"><span id="newsText" class="news-text"></span></span></button>
   </header>
 
   <div class="tabbar" id="tabbar">
@@ -567,7 +588,7 @@ const LOAN_TYPES = [
   {program:'LED', code:'KABU-W1-MICRO', name:'K-KABUHAYAN W1 (Micro)',terms:[15,25,35,50],        rate:5,               amount:'30,000 – 100,000',                        sf:{min:1,max:1}, pwdZero:true, min:30000, strictMin:true, max:100000},
   {program:'LED', code:'KABU-W2-SM',    name:'K-KABUHAYAN W2 (Small)',terms:[15,25,35,50],        rate:3,               amount:'100,000 – 150,000',                       sf:{min:1,max:1}, min:100000, strictMin:true, max:150000},
   {program:'LED', code:'KABU-W2-MED',   name:'K-KABUHAYAN W2 (Medium)',terms:[15,25,35,50],       rate:3,               amount:'151,000 – 500,000',                       sf:{min:1,max:1}, min:151000, strictMin:true, max:500000},
-  {program:'LED', code:'KABU-W3',       name:'K-KABUHAYAN W3',        terms:[15,25],              rate:t=>t===15?2.9:3.75, amount:'2nd cycle: 5,000; 3rd cycle+: max 10,000', sf:{min:2,max:3}, max:10000},
+  {program:'LED', code:'KABU-W3',       name:'K-KABUHAYAN W3',        terms:[15,25],              rate:5,               amount:'2nd cycle: 5,000; 3rd cycle+: max 10,000', sf:{min:2,max:3}, max:10000},
   {program:'LED', code:'KABU-W4',       name:'K-KABUHAYAN W4',        terms:[15,25],              rate:5,               amount:'10,000 – 50,000',                         sf:{min:2,max:3}, min:10000, max:50000},
   {program:'LED', code:'TRANSPO',       name:'K-TRANSPORTASYON',      terms:[15,25,35,50,75,100], rate:3,               amount:'3rd–6th cycle: max 50,000; 7th cycle+: max 300,000', sf:{min:1,max:1}, max:50000, cycles:[{key:'3-6',max:50000},{key:'7+',max:300000}]},
   {program:'LED', code:'ALALAY',        name:'ALALAY SA K',           terms:[15,25],              rate:5,               amount:'Max 10,000',                              sf:{min:2,max:3}, max:10000},
@@ -1608,7 +1629,7 @@ function ltHTML(){
   LOAN_TYPES.forEach(t => {
     const hmo = isHmo(t), mba = MBA_ELIGIBLE_TYPES.includes(t.code), n = t.terms.length, rm = [];
     if (t.pwdZero) rm.push('PWD: 0% SF.');
-    if (t.code==='KABU-W3') rm.push('Rate: 15w 2.9%, 25w 3.75%.');
+    if (t.code==='KABU-W3') rm.push('Rate: 5% monthly, diminishing.');
     if (t.code==='KABU-W1') rm.push('SF: 35w 4%, 50w max 5%.');
     if (hmo) rm.push('SF: 35w 4%.');
     if (t.variants) rm.push('Regular max ₱' + t.variants.regular.max.toLocaleString('en-PH') + '; Promo max ₱' + t.variants.promo.max.toLocaleString('en-PH') + '.');
@@ -1674,6 +1695,55 @@ if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
       .then(function(hit){ ready = !!hit; paint(); }).catch(function(){});
   }
   window.addEventListener('online', paint); window.addEventListener('offline', paint); paint();
+})();
+</script>
+<div id="newsModal" class="news-modal" hidden>
+  <div class="news-box" role="dialog" aria-modal="true" aria-labelledby="newsTitle">
+    <h3 id="newsTitle">🆕 What's new</h3>
+    <div class="news-sub" id="newsLatest"></div>
+    <ul id="newsList"></ul>
+    <button type="button" id="newsClose">Close</button>
+  </div>
+</div>
+<script>
+(function(){
+  /* ===== What's new =====
+     Add each new update at the TOP of this list:  d = date, s = short text (rotates in the header), t = full text (shown in the popup). */
+  var APP_UPDATES = [
+    {d:'Nov 3, 2026', s:'K-Kabuhayan W3: now 5% diminishing', t:'K-Kabuhayan W3: monthly interest is now 5% diminishing (15 and 25 weeks).'},
+    {d:'Oct 2026', s:'Rounding fixed: debit = credit', t:'SF and CLIP now round half-up to the centavo; Net absorbs any difference so debit = credit.'},
+    {d:'Oct 2026', s:'New: Number of Units input', t:'Number of Units added for Kalusugan W1, Kalusugan W3 and K-HMO.'},
+    {d:'Oct 2026', s:'Partner cards cleaned up', t:'Partner card title now reads “Partner : name”; Insurance Category is hidden for K-HMO and K-Benepisyo W2; Disbursement Details is hidden for partner loans.'},
+    {d:'Oct 2026', s:'Loan Amount now shows commas', t:'Loan Amount now shows comma separators (e.g. 12,500).'},
+    {d:'Oct 2026', s:'Satellite offices now listed A–Z', t:'Satellite offices are listed alphabetically; Bagong Silang, Tandang Sora and Sapang Palay now show their full names.'}
+  ];
+  var pill = document.getElementById('newsPill'), txt = document.getElementById('newsText'),
+      modal = document.getElementById('newsModal'), ul = document.getElementById('newsList');
+  if (!pill || !txt || !modal || !APP_UPDATES.length) return;
+
+  /* header: the 4 newest updates pop in one after another, slowly */
+  var list = APP_UPDATES.slice(0, 4), i = 0,
+      reduce = !!(window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
+  function show(){
+    txt.textContent = list[i].s;
+    txt.classList.remove('pop'); void txt.offsetWidth;
+    if (!reduce) txt.classList.add('pop');
+  }
+  txt.addEventListener('animationend', function(){ i = (i + 1) % list.length; show(); });
+  show();
+
+  /* popup: full list */
+  APP_UPDATES.forEach(function(u){
+    var li = document.createElement('li'), b = document.createElement('b'), s = document.createElement('span');
+    b.textContent = u.d; s.textContent = u.t; li.appendChild(b); li.appendChild(s); ul.appendChild(li);
+  });
+  document.getElementById('newsLatest').textContent = 'Latest update: ' + APP_UPDATES[0].d;
+  function openNews(){ modal.hidden = false; }
+  function closeNews(){ modal.hidden = true; }
+  pill.addEventListener('click', openNews);
+  document.getElementById('newsClose').addEventListener('click', closeNews);
+  modal.addEventListener('click', function(e){ if (e.target === modal) closeNews(); });
+  document.addEventListener('keydown', function(e){ if (e.key === 'Escape') closeNews(); });
 })();
 </script>
 </body>
